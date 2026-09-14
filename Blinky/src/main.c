@@ -15,7 +15,7 @@
 #define LED5180_NODE DT_ALIAS(led5180)
 
 /* Default board alias for Button 1 / SW1. */
-#define BUTTON_NODE DT_ALIAS(sw0)
+#define BUTTON_NODE DT_ALIAS(button5180)
 
 static const struct gpio_dt_spec led =
 	GPIO_DT_SPEC_GET(LED5180_NODE, gpios);
