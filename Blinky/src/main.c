@@ -9,6 +9,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
+#if defined(CONFIG_SUM_PRINT)
+#include "sum_printk.h"
+#elif defined(CONFIG_SUM_LOG)
+#include "sum_log.h"
+#endif
+
 #define POLL_INTERVAL_MS 20
 
 /* Custom LED alias from the application overlay. */
@@ -25,9 +31,22 @@ static const struct gpio_dt_spec button =
 
 int main(void)
 {
+	const int input_a = 7;
+	const int input_b = -2;
 	int ret;
+	int sum_result;
 	bool led_state = false;
 	bool previous_pressed = false;
+
+#if defined(CONFIG_SUM_PRINT)
+	sum_result = sum_printk(input_a, input_b);
+#elif defined(CONFIG_SUM_LOG)
+	sum_result = sum_log(input_a, input_b);
+#endif
+
+	if (sum_result != 5) {
+		return 0;
+	}
 
 	if (!gpio_is_ready_dt(&led) ||
 	    !gpio_is_ready_dt(&button)) {
