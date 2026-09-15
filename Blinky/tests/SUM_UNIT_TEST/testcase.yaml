@@ -1,0 +1,9 @@
+tests:
+  sum_log.test:
+    platform_allow:
+      - qemu_cortex_m3
+      - nrf7002dk/nrf5340/cpuapp/ns
+    tags:
+      - sum_log
+      - unit
+    harness: ztest

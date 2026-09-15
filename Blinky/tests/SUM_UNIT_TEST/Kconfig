@@ -1,0 +1,3 @@
+mainmenu "Sum unit tests"
+
+source "Kconfig.zephyr"
