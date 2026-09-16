@@ -13,3 +13,12 @@ elseif(CONFIG_SUM_LOG)
   target_sources(app PRIVATE sum_log/sum_log.c)
   target_include_directories(app PRIVATE sum_log)
 endif()
+
+# Add the bme280_raw source file and include directory
+target_sources(app PRIVATE
+  bme280_raw/bme280_raw.c
+)
+
+target_include_directories(app PRIVATE
+  bme280_raw
+)

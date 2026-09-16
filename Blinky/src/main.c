@@ -9,11 +9,19 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
+#include <stdint.h>
+#include <zephyr/logging/log.h>
+#include "bme280_raw.h"
+
 #if defined(CONFIG_SUM_PRINT)
 #include "sum_printk.h"
 #elif defined(CONFIG_SUM_LOG)
 #include "sum_log.h"
 #endif
+
+LOG_MODULE_REGISTER(blinky_app, LOG_LEVEL_INF);
+
+#define TEMPERATURE_INTERVAL_MS 2000
 
 #define POLL_INTERVAL_MS 20
 
@@ -44,6 +52,9 @@ int main(void)
 	sum_result = sum_log(input_a, input_b);
 #endif
 
+	// Initialize the BME280 sensor
+	int64_t next_temperature_ms = 0;
+	
 	if (sum_result != 5) {
 		return 0;
 	}
@@ -60,6 +71,13 @@ int main(void)
 
 	ret = gpio_pin_configure_dt(&button, GPIO_INPUT);
 	if (ret < 0) {
+		return 0;
+	}
+
+	// Initialize the BME280 sensor
+	ret = bme280_raw_init();
+	if (ret < 0) {
+		LOG_ERR("BME280 initialization failed: %d", ret);
 		return 0;
 	}
 
@@ -83,6 +101,30 @@ int main(void)
 		}
 
 		previous_pressed = pressed;
+
+		// Read and log the temperature from the BME280 sensor every TEMPERATURE_INTERVAL_MS milliseconds
+		int64_t now = k_uptime_get();
+		if (now >= next_temperature_ms) {
+			int32_t temperature;
+			int32_t magnitude;
+
+			ret = bme280_raw_read_temperature(&temperature);
+			if (ret < 0) {
+				LOG_ERR("Temperature read failed: %d", ret);
+			} else {
+				magnitude = temperature < 0
+						? -temperature
+						: temperature;
+
+				LOG_INF("Temperature: %s%d.%02d C",
+					temperature < 0 ? "-" : "",
+					magnitude / 100,
+					magnitude % 100);
+			}
+
+			next_temperature_ms = now + TEMPERATURE_INTERVAL_MS;
+		}
+
 		k_msleep(POLL_INTERVAL_MS);
 	}
 
