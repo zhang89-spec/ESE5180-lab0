@@ -6,7 +6,9 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/util.h>
 
+#include "bme280_math.h"
 #include "bme280_raw.h"
 
 LOG_MODULE_REGISTER(bme280_raw, LOG_LEVEL_INF);
@@ -16,6 +18,9 @@ LOG_MODULE_REGISTER(bme280_raw, LOG_LEVEL_INF);
 #if !DT_NODE_HAS_STATUS(BME280_NODE, okay)
 #error "The bme280_5180 devicetree node is missing or disabled"
 #endif
+
+BUILD_ASSERT(DT_REG_ADDR(BME280_NODE) == 0x77,
+	     "BME280 must use I2C address 0x77");
 
 #define BME280_REG_CALIB_T1  0x88
 #define BME280_REG_CHIP_ID   0xD0
@@ -38,9 +43,7 @@ LOG_MODULE_REGISTER(bme280_raw, LOG_LEVEL_INF);
 static const struct i2c_dt_spec bme280 =
 	I2C_DT_SPEC_GET(BME280_NODE);
 
-static uint16_t dig_t1;
-static int16_t dig_t2;
-static int16_t dig_t3;
+static struct bme280_temp_calibration temp_calibration;
 static bool initialized;
 
 static uint16_t decode_u16_le(const uint8_t *data)
@@ -99,9 +102,9 @@ int bme280_raw_init(void)
 		return ret;
 	}
 
-	dig_t1 = decode_u16_le(&calibration[0]);
-	dig_t2 = decode_s16_le(&calibration[2]);
-	dig_t3 = decode_s16_le(&calibration[4]);
+	temp_calibration.dig_t1 = decode_u16_le(&calibration[0]);
+	temp_calibration.dig_t2 = decode_s16_le(&calibration[2]);
+	temp_calibration.dig_t3 = decode_s16_le(&calibration[4]);
 
 	ret = bme280_write_register(BME280_REG_CTRL_MEAS,
 				    BME280_CTRL_MEAS_VALUE);
@@ -123,10 +126,6 @@ int bme280_raw_read_temperature(int32_t *temperature_centi_c)
 {
 	uint8_t raw[3];
 	int32_t adc_t;
-	int64_t var1;
-	int64_t var2;
-	int64_t delta;
-	int64_t t_fine;
 	int ret;
 
 	if (!initialized || temperature_centi_c == NULL) {
@@ -144,23 +143,7 @@ int bme280_raw_read_temperature(int32_t *temperature_centi_c)
 		((int32_t)raw[1] << 4) |
 		((int32_t)raw[2] >> 4);
 
-	/*
-	 * Bosch integer temperature compensation formula.
-	 * The result is expressed in 0.01 degrees Celsius.
-	 */
-	var1 = (((((int64_t)adc_t >> 3) -
-		  ((int64_t)dig_t1 << 1))) *
-		(int64_t)dig_t2) >> 11;
-
-	delta = ((int64_t)adc_t >> 4) - (int64_t)dig_t1;
-
-	var2 = (((delta * delta) >> 12) *
-		(int64_t)dig_t3) >> 14;
-
-	t_fine = var1 + var2;
-
-	*temperature_centi_c =
-		(int32_t)((t_fine * 5 + 128) >> 8);
-
-	return 0;
+	return bme280_compensate_temperature(&temp_calibration,
+					     adc_t,
+					     temperature_centi_c);
 }

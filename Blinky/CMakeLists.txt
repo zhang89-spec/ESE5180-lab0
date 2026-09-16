@@ -17,6 +17,7 @@ endif()
 # Add the bme280_raw source file and include directory
 target_sources(app PRIVATE
   bme280_raw/bme280_raw.c
+  bme280_raw/bme280_math.c
 )
 
 target_include_directories(app PRIVATE

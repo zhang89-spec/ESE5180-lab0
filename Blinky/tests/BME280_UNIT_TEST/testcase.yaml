@@ -1,0 +1,9 @@
+tests:
+  bme280.unit:
+    platform_allow:
+      - qemu_cortex_m3
+    tags:
+      - bme280
+      - unit
+      - devicetree
+    harness: ztest

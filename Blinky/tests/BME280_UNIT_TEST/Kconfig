@@ -1,0 +1,3 @@
+mainmenu "BME280 unit tests"
+
+source "Kconfig.zephyr"

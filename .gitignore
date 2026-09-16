@@ -50,3 +50,7 @@ tags
 
 .idea
 Cellular-IoT-Fundamentals.code-workspace
+
+# test output
+/tests/**/build/
+/twister-out*/
